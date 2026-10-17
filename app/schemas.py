@@ -23,7 +23,14 @@ class ProviderOut(BaseModel):
     supported_payment_methods: list[str]
     configured_cost: float
     simulated_success_rate: float
+    timeout_rate: float
     average_latency_ms: int
+
+
+class ProviderHealthUpdate(BaseModel):
+    is_healthy: bool | None = None
+    success_rate: float | None = Field(default=None, ge=0.0, le=1.0)
+    timeout_rate: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class PaymentCreate(BaseModel):
@@ -44,6 +51,7 @@ class PaymentAttemptOut(BaseModel):
     failure_code: str | None
     latency_ms: int | None
     simulated_cost: float | None
+    routing_decision: dict[str, object] | None = None
     created_at: datetime
     completed_at: datetime | None
 
@@ -60,8 +68,46 @@ class PaymentOut(BaseModel):
     idempotency_key: str | None
     created_at: datetime
     updated_at: datetime
+    selected_provider: str | None = None
+    attempt_count: int = 0
+    simulated: bool = True
     attempts: list[PaymentAttemptOut] = []
 
 
 class PaymentCreatedResponse(PaymentOut):
+    """POST /payments returns the finished (routed and processed) payment."""
+
+
+class DemoSeedRequest(BaseModel):
+    count: int = Field(default=100, ge=1, le=1000)
+    seed: int | None = None
+
+
+class DemoSeedResponse(BaseModel):
+    seeded: int
+    seed: int
+    outcomes: dict[str, int]
     simulated: bool = True
+
+
+class DemoResetResponse(BaseModel):
+    reset: bool = True
+    simulated: bool = True
+
+
+class ProviderSummary(BaseModel):
+    success_rate: float
+    avg_latency_ms: float | None
+    total_cost: float
+    attempts: int
+
+
+class AnalyticsSummary(BaseModel):
+    simulated: bool = True
+    totals: dict[str, int]
+    success_rate: float
+    simulated_value: float
+    value_by_currency: dict[str, float]
+    per_provider: dict[str, ProviderSummary]
+    failure_codes: dict[str, int]
+    retry_count: int

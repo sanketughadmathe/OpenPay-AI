@@ -22,6 +22,7 @@ class Provider(Base):
     supported_payment_methods: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     configured_cost: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     simulated_success_rate: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    timeout_rate: Mapped[float] = mapped_column(Float, default=0.02, nullable=False)
     average_latency_ms: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow, nullable=False)
@@ -46,6 +47,18 @@ class Payment(Base):
         order_by="PaymentAttempt.attempt_number",
     )
 
+    @property
+    def selected_provider(self) -> str | None:
+        """Provider of the most recent attempt, if any."""
+
+        if self.attempts:
+            return self.attempts[-1].provider_id
+        return None
+
+    @property
+    def attempt_count(self) -> int:
+        return len(self.attempts)
+
 
 class PaymentAttempt(Base):
     __tablename__ = "payment_attempts"
@@ -59,6 +72,7 @@ class PaymentAttempt(Base):
     failure_code: Mapped[str | None] = mapped_column(String(80))
     latency_ms: Mapped[int | None] = mapped_column(Integer)
     simulated_cost: Mapped[float | None] = mapped_column(Float)
+    routing_decision: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=utcnow, nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column()
 

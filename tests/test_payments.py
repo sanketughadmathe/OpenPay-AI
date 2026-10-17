@@ -32,9 +32,12 @@ def test_create_payment_and_idempotent_replay() -> None:
         )
         assert response.status_code == 201
         created = response.json()
-        assert created["status"] == "CREATED"
+        # POST returns the finished payment: routed, attempted, terminal or pending.
+        assert created["status"] in {"SUCCEEDED", "FAILED", "PENDING"}
         assert created["simulated"] is True
-        assert created["attempts"] == []
+        assert created["attempt_count"] >= 1
+        assert created["selected_provider"] in {"provider_a", "provider_b"}
+        assert len(created["attempts"]) == created["attempt_count"]
 
         replay = client.post(
             "/api/v1/payments",
@@ -43,6 +46,8 @@ def test_create_payment_and_idempotent_replay() -> None:
         )
         assert replay.status_code == 200
         assert replay.json()["id"] == created["id"]
+        assert replay.json()["status"] == created["status"]
+        assert replay.json()["attempt_count"] == created["attempt_count"]
 
 
 def test_idempotency_key_rejects_changed_payload() -> None:
@@ -71,10 +76,14 @@ def test_get_payment_and_attempts() -> None:
         details = client.get(f"/api/v1/payments/{payment_id}")
         assert details.status_code == 200
         assert details.json()["id"] == payment_id
+        assert details.json()["selected_provider"] in {"provider_a", "provider_b"}
 
         attempts = client.get(f"/api/v1/payments/{payment_id}/attempts")
         assert attempts.status_code == 200
-        assert attempts.json() == []
+        attempt_rows = attempts.json()
+        assert len(attempt_rows) >= 1
+        assert attempt_rows[0]["routing_decision"] is not None
+        assert attempt_rows[0]["routing_decision"]["selected"] == attempt_rows[0]["provider_id"]
 
         assert client.get("/api/v1/payments/missing").status_code == 404
 

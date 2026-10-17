@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./openpay.db"
     log_level: str = "INFO"
     api_version: str = "0.1.0"
+    sim_seed: int = 42
+    max_attempts: int = 2
+    ollama_url: str = "http://localhost:11434"
+    ollama_model: str = "glm-5.3:cloud"
 
     model_config = SettingsConfigDict(
         env_prefix="OPENPAY_",
