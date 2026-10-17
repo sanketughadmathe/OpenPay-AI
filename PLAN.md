@@ -1,6 +1,6 @@
 # OpenPay AI — Build Plan v3
 
-Source: [OpenPay_AI_PRD.md](OpenPay_AI_PRD.md). Re-baselined at **16:25** with ~95 minutes to 18:00. Build stop **17:55**, rehearsal 17:55–18:00.
+Source: [OpenPay_AI_PRD.md](OpenPay_AI_PRD.md). Re-baselined at **16:25**; status refreshed **16:51**. Build stop **17:55**, rehearsal 17:55–18:00.
 
 ## What changed
 
@@ -28,29 +28,35 @@ Source: [OpenPay_AI_PRD.md](OpenPay_AI_PRD.md). Re-baselined at **16:25** with ~
 
 **Cut:** Streamlit, pandas, Docker Compose, Redis, Prometheus, Postgres, webhooks, sandbox integration, free-text AI chat, circuit breaker, CSV export (replaced by a 5-line client-side CSV download if time remains).
 
-## Status at 16:25
+## Status at 16:51 (commit 303ef2c)
 
 | Story | State |
 |---|---|
 | S0 Scaffold, config, health, SQLite | ✅ |
-| S1.1 Schema and models | ✅ — add `timeout_rate` to Provider, `routing_decision` JSON to PaymentAttempt |
+| S1.1 Schema and models (+ `timeout_rate`, `routing_decision`) | ✅ |
 | S1.4 State machine with audit | ✅ |
 | S1.6 Idempotency (200 replay, 409 conflict) | ✅ |
-| S2.1 POST/GET payment, GET attempts | partial — no list endpoint; response lacks `selected_provider`, `attempt_count` |
-| S2.2 GET providers | partial — no PATCH health |
-| Everything else | ❌ |
+| E1 S1.a providers, S1.b router, S1.c orchestrator + retry | ✅ CP1 passed 16:44 |
+| E2 S2.a PATCH health, S2.b seed/reset, S2.c list + summary, S2.d static mount | ✅ CP2 passed 16:44 |
+| S5.a tests | ✅ 27 passing |
+| E3 dashboard | ❌ only the hello placeholder at `/ui/` |
+| E4 AI copilot | ❌ no `app/ai.py`, explain endpoint 404; Ollama defaults sit in `config.py` |
+| S5.b `demo.sh` | ❌ |
+| S5.c README | ❌ still describes the first commit |
 
-6 tests pass. README wrongly says Epics 1 and 2 are complete; fix in E5.
+Verified by running reset → seed 100 → PATCH A unhealthy → seed 50: all 50 new payments routed to B; a retried payment shows attempt 1 on A `PROVIDER_ERROR`, attempt 2 on B `SUCCEEDED`, routing decision stored on both. About 17 min ahead of the CP2 gate.
+
+Notes for E3: attempt rows carry the failure code as the attempt `status` (e.g. `PROVIDER_ERROR`), so TS types should match the API, not the plan's `FAILED` label. Seed mixes INR and USD; the summary splits value by currency, so the KPI should use the INR bucket or say "mixed".
 
 ## Timeline
 
 | Window | Epic | Gate |
 |---|---|---|
-| 16:25–16:55 | E1 Orchestrator slice | **CP1:** `curl POST /payments` returns a routed, retried, persisted payment with `selected_provider` and `attempt_count` |
-| 16:55–17:08 | E2 Control, analytics, static mount | **CP2:** seed 100 → PATCH A unhealthy → seed 50; summary shifts to B. `/ui/` serves a hello page |
-| 17:08–17:45 | E3 Dashboard (HTML/CSS/TS) | **CP3:** full §15 demo runs in the browser without AI |
-| 17:45–17:55 | E4 AI copilot | **CP4:** Explain returns rule-based instantly, GLM answer replaces it; works with Ollama stopped |
-| 17:55–18:00 | E5 Tests, demo.sh, README, one rehearsal | `pytest` green, `demo.sh` runs from reset |
+| ✅ done 16:44 | E1 Orchestrator slice | **CP1:** `curl POST /payments` returns a routed, retried, persisted payment with `selected_provider` and `attempt_count` |
+| ✅ done 16:44 | E2 Control, analytics, static mount | **CP2:** seed 100 → PATCH A unhealthy → seed 50; summary shifts to B. `/ui/` serves a hello page |
+| 16:51–17:30 | E3 Dashboard (HTML/CSS/TS) | **CP3:** full §15 demo runs in the browser without AI |
+| 17:30–17:45 | E4 AI copilot | **CP4:** Explain returns rule-based instantly, GLM answer replaces it; works with Ollama stopped |
+| 17:45–17:55 | E5 demo.sh, README, one rehearsal (tests already green) | `demo.sh` runs from reset, README matches the repo |
 
 **Scope rules:**
 - CP1 slips past 17:05 → E4 ships rule-based only (skip S4.b).
@@ -61,24 +67,24 @@ Source: [OpenPay_AI_PRD.md](OpenPay_AI_PRD.md). Re-baselined at **16:25** with ~
 
 ## Epics and stories
 
-### E1 — Orchestrator slice (30 min) · critical path
+### E1 — Orchestrator slice (30 min) · ✅ done
 
-- **S1.a Simulated providers (9).** `app/providers.py`: `simulate_attempt(provider, payment, rng) -> AttemptResult(status, failure_code, latency_ms, cost)`. Outcome draw: `success_rate` → SUCCESS; `timeout_rate` → TIMEOUT; remaining mass 70/30 `PROVIDER_ERROR` / `DECLINED`. Unhealthy → `PROVIDER_DOWN`. Latency = `average_latency_ms ± 30%`. Cost = `amount * configured_cost`. No sleeping. Add `timeout_rate` column (default 0.02); delete `openpay.db` to recreate.
+- **S1.a Simulated providers (9). ✅** `app/providers.py`: `simulate_attempt(provider, payment, rng) -> AttemptResult(status, failure_code, latency_ms, cost)`. Outcome draw: `success_rate` → SUCCESS; `timeout_rate` → TIMEOUT; remaining mass 70/30 `PROVIDER_ERROR` / `DECLINED`. Unhealthy → `PROVIDER_DOWN`. Latency = `average_latency_ms ± 30%`. Cost = `amount * configured_cost`. No sleeping. Add `timeout_rate` column (default 0.02); delete `openpay.db` to recreate.
   AC: Same seed → same outcomes.
-- **S1.b Router (7).** `app/router.py`, pure: filter unhealthy → filter unsupported currency/method → score `0.6*recent_success − 0.3*cost_norm − 0.1*latency_norm` → highest wins, ties by id. Returns `RoutingDecision{candidates, excluded: {id: reason}, scores, selected, weights}`. Recent success = last 50 attempts, else configured rate.
+- **S1.b Router (7). ✅** `app/router.py`, pure: filter unhealthy → filter unsupported currency/method → score `0.6*recent_success − 0.3*cost_norm − 0.1*latency_norm` → highest wins, ties by id. Returns `RoutingDecision{candidates, excluded: {id: reason}, scores, selected, weights}`. Recent success = last 50 attempts, else configured rate.
   AC: Unit-testable with no DB.
-- **S1.c Orchestrator + retry (14).** `app/orchestrator.py::process_payment(db, payment, seed)`: `CREATED→PROCESSING`; loop ≤ `MAX_ATTEMPTS` routing with `exclude=tried`; persist attempt with `routing_decision` JSON; audit `ROUTING_DECISION_MADE`, `PROVIDER_ATTEMPT_INITIATED`, `PROVIDER_RESPONSE_RECEIVED`, `RETRY_INITIATED`; map outcomes per the retry table; no candidate → `FAILED / NO_ELIGIBLE_PROVIDER`. Call it from `create_payment_endpoint` so POST returns the finished payment. Extend `PaymentOut` with `selected_provider`, `attempt_count`, `simulated: true`.
+- **S1.c Orchestrator + retry (14). ✅** `app/orchestrator.py::process_payment(db, payment, seed)`: `CREATED→PROCESSING`; loop ≤ `MAX_ATTEMPTS` routing with `exclude=tried`; persist attempt with `routing_decision` JSON; audit `ROUTING_DECISION_MADE`, `PROVIDER_ATTEMPT_INITIATED`, `PROVIDER_RESPONSE_RECEIVED`, `RETRY_INITIATED`; map outcomes per the retry table; no candidate → `FAILED / NO_ELIGIBLE_PROVIDER`. Call it from `create_payment_endpoint` so POST returns the finished payment. Extend `PaymentOut` with `selected_provider`, `attempt_count`, `simulated: true`.
   AC: A fails `PROVIDER_ERROR` → B succeeds → one payment, two attempts, `SUCCEEDED`.
 
-### E2 — Control, analytics, static mount (13 min)
+### E2 — Control, analytics, static mount (13 min) · ✅ done
 
-- **S2.a `PATCH /api/v1/providers/{id}/health` (3).** Body `{is_healthy?, success_rate?, timeout_rate?}`. Audits `PROVIDER_HEALTH_CHANGED` (the incident summary splits before/after on this).
-- **S2.b `POST /api/v1/demo/seed {count, seed}`, `POST /api/v1/demo/reset` (4).** Seed runs real payments through `process_payment` with varied amounts, currencies and methods. Reset truncates tables and reseeds default providers.
-- **S2.c `GET /api/v1/payments?status=&provider=&limit=` and `GET /api/v1/analytics/summary` (4).** Summary: totals, success rate, simulated value, per-provider `{success_rate, avg_latency_ms, total_cost, attempts}`, failure-code counts, retry count, `simulated: true`.
+- **S2.a `PATCH /api/v1/providers/{id}/health` (3). ✅** Body `{is_healthy?, success_rate?, timeout_rate?}`. Audits `PROVIDER_HEALTH_CHANGED` (the incident summary splits before/after on this).
+- **S2.b `POST /api/v1/demo/seed {count, seed}`, `POST /api/v1/demo/reset` (4). ✅** Seed runs real payments through `process_payment` with varied amounts, currencies and methods. Reset truncates tables and reseeds default providers.
+- **S2.c `GET /api/v1/payments?status=&provider=&limit=` and `GET /api/v1/analytics/summary` (4). ✅** Summary: totals, success rate, simulated value, per-provider `{success_rate, avg_latency_ms, total_cost, attempts}`, failure-code counts, retry count, `simulated: true`.
   AC: Numbers equal SQL counts (AC-7).
-- **S2.d Static mount (2).** `dashboard/index.html` with "hello", `app.mount("/ui", StaticFiles(directory="dashboard", html=True))` after all routes. `dashboard/dist/` in `.gitignore`.
+- **S2.d Static mount (2). ✅** `dashboard/index.html` with "hello", `app.mount("/ui", StaticFiles(directory="dashboard", html=True))` after all routes. `dashboard/dist/` in `.gitignore`.
 
-### E3 — Dashboard in HTML/CSS/TS (37 min)
+### E3 — Dashboard in HTML/CSS/TS (37 min) · ⏳ critical path
 
 Dark single page, left sidebar of controls, three views switched by nav buttons (no router). Red banner on every view: **SIMULATED — no real money**. Overview auto-refreshes every 3 s via `setInterval`; every control action triggers an immediate refresh.
 
@@ -95,7 +101,7 @@ Dark single page, left sidebar of controls, three views switched by nav buttons 
 
 ### E5 — Tests, demo script, README (5 min + rehearsal)
 
-- **S5.a Tests (3).** Router: unhealthy excluded, unsupported currency excluded, higher score wins. Orchestrator: A fails → B succeeds gives 2 attempts; timeout → `PENDING` with 1 attempt; attempts ≤ `MAX_ATTEMPTS`. Existing 6 stay green.
+- **S5.a Tests (3). ✅** Router: unhealthy excluded, unsupported currency excluded, higher score wins. Orchestrator: A fails → B succeeds gives 2 attempts; timeout → `PENDING` with 1 attempt; attempts ≤ `MAX_ATTEMPTS`. Existing 6 stay green.
 - **S5.b `demo.sh` (1).** reset → seed 100 → summary → PATCH A unhealthy → seed 50 → summary → list `?status=SUCCEEDED` and pick one with `attempt_count == 2` → attempts → ai/explain.
 - **S5.c README (1).** Fix status. Run: `uv run uvicorn app.main:app --reload` and `bun build dashboard/src/main.ts --outdir dashboard/dist --watch`. Open `http://127.0.0.1:8000/ui/`. `.env` is optional; every setting has a default in `config.py`. Mention `OPENPAY_OLLAMA_URL` and `OPENPAY_OLLAMA_MODEL` as overrides only for running the copilot against a different Ollama host or model tag. Note GLM 5.3 is open-weight, served through Ollama's cloud runtime; any local Ollama tag is a drop-in.
 
