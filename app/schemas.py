@@ -78,6 +78,17 @@ class PaymentCreatedResponse(PaymentOut):
     """POST /payments returns the finished (routed and processed) payment."""
 
 
+class AuditEventOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    payment_id: str | None
+    attempt_id: str | None
+    event_type: str
+    event_payload: dict[str, object]
+    created_at: datetime
+
+
 class DemoSeedRequest(BaseModel):
     count: int = Field(default=100, ge=1, le=1000)
     seed: int | None = None

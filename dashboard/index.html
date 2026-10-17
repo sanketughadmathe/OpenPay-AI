@@ -4,10 +4,145 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>OpenPay AI — Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
-  <h1>hello</h1>
-  <p>OpenPay AI dashboard placeholder — the full dashboard lands in E3.</p>
-  <p><strong>SIMULATED — no real money.</strong></p>
+  <div class="sim-banner">SIMULATED — no real money</div>
+
+  <div class="app">
+    <aside class="sidebar">
+      <h1 class="brand">OpenPay<span>AI</span></h1>
+
+      <div class="control-group" id="provider-controls">
+        <h2>Providers</h2>
+        <div class="provider-controls" data-provider="provider_a">
+          <div class="provider-head">
+            <label class="health-toggle">
+              <input type="checkbox" id="ctl-a-healthy" checked>
+              <span class="provider-name">Provider A</span>
+            </label>
+            <span class="dot" id="dot-a"></span>
+          </div>
+          <div class="rate-row">
+            <label for="ctl-a-rate">success rate</label>
+            <input type="range" id="ctl-a-rate" min="0" max="100" value="97">
+            <output id="ctl-a-rate-val">97%</output>
+          </div>
+        </div>
+        <div class="provider-controls" data-provider="provider_b">
+          <div class="provider-head">
+            <label class="health-toggle">
+              <input type="checkbox" id="ctl-b-healthy" checked>
+              <span class="provider-name">Provider B</span>
+            </label>
+            <span class="dot" id="dot-b"></span>
+          </div>
+          <div class="rate-row">
+            <label for="ctl-b-rate">success rate</label>
+            <input type="range" id="ctl-b-rate" min="0" max="100" value="94">
+            <output id="ctl-b-rate-val">94%</output>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h2>Demo</h2>
+        <button id="btn-seed" class="btn">Seed 100</button>
+        <button id="btn-degrade-a" class="btn">Degrade A</button>
+        <button id="btn-outage-a" class="btn btn-danger">Outage A</button>
+        <button id="btn-reset" class="btn">Reset</button>
+      </div>
+
+      <div id="toast" class="toast" hidden></div>
+      <p class="sidebar-note">Controls PATCH provider health; the router reacts on the next payment.</p>
+    </aside>
+
+    <main class="main">
+      <nav class="views">
+        <button class="nav-btn active" data-view="overview">Overview</button>
+        <button class="nav-btn" data-view="transactions">Transactions</button>
+        <button class="nav-btn" data-view="detail">Payment detail</button>
+      </nav>
+
+      <section class="view" id="view-overview">
+        <div class="kpi-row" id="kpi-row"></div>
+        <div class="charts">
+          <div class="chart-card">
+            <h2>Per-provider success rate</h2>
+            <canvas id="chart-providers" height="220"></canvas>
+          </div>
+          <div class="chart-card">
+            <h2>Failure codes</h2>
+            <canvas id="chart-failures" height="220"></canvas>
+          </div>
+        </div>
+        <p class="muted" id="overview-note"></p>
+      </section>
+
+      <section class="view" id="view-transactions" hidden>
+        <div class="filters">
+          <label>Status
+            <select id="filter-status">
+              <option value="">All</option>
+              <option value="SUCCEEDED">SUCCEEDED</option>
+              <option value="FAILED">FAILED</option>
+              <option value="PENDING">PENDING</option>
+            </select>
+          </label>
+          <label>Provider
+            <select id="filter-provider">
+              <option value="">All</option>
+              <option value="provider_a">Provider A</option>
+              <option value="provider_b">Provider B</option>
+            </select>
+          </label>
+        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Payment</th><th>Order</th><th>Amount</th><th>Method</th>
+              <th>Status</th><th>Provider</th><th>Attempts</th><th>Created</th>
+            </tr>
+          </thead>
+          <tbody id="tx-tbody"></tbody>
+        </table>
+      </section>
+
+      <section class="view" id="view-detail" hidden>
+        <div class="detail-head">
+          <button class="btn btn-small" id="detail-back">← Transactions</button>
+          <div id="detail-header"></div>
+          <div class="detail-id-open">
+            <input id="detail-id-input" placeholder="paste payment ID">
+            <button class="btn btn-small" id="detail-id-go">Open</button>
+          </div>
+        </div>
+
+        <h2>Attempt timeline</h2>
+        <table class="table">
+          <thead>
+            <tr><th>#</th><th>Provider</th><th>Outcome</th><th>Failure code</th><th>Latency</th><th>Cost</th></tr>
+          </thead>
+          <tbody id="detail-attempts"></tbody>
+        </table>
+
+        <h2>Routing decisions</h2>
+        <div id="detail-routing"></div>
+
+        <h2>Audit events</h2>
+        <ul class="event-list" id="detail-events"></ul>
+
+        <h2>AI copilot</h2>
+        <div class="copilot-row">
+          <button class="btn" id="btn-explain">Explain this payment</button>
+          <button class="btn" id="btn-incident">Summarize incident</button>
+        </div>
+        <div id="explain-card" class="explain-card" hidden></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="dist/main.js"></script>
 </body>
 </html>

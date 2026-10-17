@@ -39,7 +39,7 @@ Source: [OpenPay_AI_PRD.md](OpenPay_AI_PRD.md). Re-baselined at **16:25**; statu
 | E1 S1.a providers, S1.b router, S1.c orchestrator + retry | ✅ CP1 passed 16:44 |
 | E2 S2.a PATCH health, S2.b seed/reset, S2.c list + summary, S2.d static mount | ✅ CP2 passed 16:44 |
 | S5.a tests | ✅ 27 passing |
-| E3 dashboard | ❌ only the hello placeholder at `/ui/` |
+| E3 dashboard | ✅ built + served at `/ui` (strict-tsc clean, bundle built); CP3 = user's browser walkthrough |
 | E4 AI copilot | ❌ no `app/ai.py`, explain endpoint 404; Ollama defaults sit in `config.py` |
 | S5.b `demo.sh` | ❌ |
 | S5.c README | ❌ still describes the first commit |
@@ -54,7 +54,7 @@ Notes for E3: attempt rows carry the failure code as the attempt `status` (e.g. 
 |---|---|---|
 | ✅ done 16:44 | E1 Orchestrator slice | **CP1:** `curl POST /payments` returns a routed, retried, persisted payment with `selected_provider` and `attempt_count` |
 | ✅ done 16:44 | E2 Control, analytics, static mount | **CP2:** seed 100 → PATCH A unhealthy → seed 50; summary shifts to B. `/ui/` serves a hello page |
-| 16:51–17:30 | E3 Dashboard (HTML/CSS/TS) | **CP3:** full §15 demo runs in the browser without AI |
+| ✅ built ~17:00 | E3 Dashboard (HTML/CSS/TS) | **CP3:** full §15 demo runs in the browser without AI — user walkthrough pending |
 | 17:30–17:45 | E4 AI copilot | **CP4:** Explain returns rule-based instantly, GLM answer replaces it; works with Ollama stopped |
 | 17:45–17:55 | E5 demo.sh, README, one rehearsal (tests already green) | `demo.sh` runs from reset, README matches the repo |
 

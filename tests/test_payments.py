@@ -88,6 +88,20 @@ def test_get_payment_and_attempts() -> None:
         assert client.get("/api/v1/payments/missing").status_code == 404
 
 
+def test_get_payment_events() -> None:
+    with TestClient(app) as client:
+        created = client.post("/api/v1/payments", json=create_payload())
+        payment_id = created.json()["id"]
+
+        events = client.get(f"/api/v1/payments/{payment_id}/events")
+        assert events.status_code == 200
+        types = [event["event_type"] for event in events.json()]
+        assert "PAYMENT_CREATED" in types
+        assert "ROUTING_DECISION_MADE" in types
+
+        assert client.get("/api/v1/payments/missing/events").status_code == 404
+
+
 def test_payment_creation_is_audited() -> None:
     with TestClient(app) as client:
         created = client.post("/api/v1/payments", json=create_payload())

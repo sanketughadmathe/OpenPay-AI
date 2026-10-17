@@ -11,7 +11,7 @@ from app.analytics import build_summary
 from app.config import get_settings
 from app.database import SessionLocal, get_db, init_db
 from app.demo import reset_demo, seed_default_providers, seed_payments
-from app.models import Payment, PaymentAttempt, Provider
+from app.models import AuditEvent, Payment, PaymentAttempt, Provider
 from app.orchestrator import process_payment
 from app.payment_service import (
     IdempotencyConflict,
@@ -22,6 +22,7 @@ from app.payment_service import (
 )
 from app.schemas import (
     AnalyticsSummary,
+    AuditEventOut,
     DemoResetResponse,
     DemoSeedRequest,
     DemoSeedResponse,
@@ -186,6 +187,25 @@ def get_payment_attempts_endpoint(
     if attempts is None:
         raise HTTPException(status_code=404, detail="Payment not found")
     return attempts
+
+
+@app.get(
+    "/api/v1/payments/{payment_id}/events",
+    response_model=list[AuditEventOut],
+    tags=["payments"],
+)
+def get_payment_events_endpoint(
+    payment_id: str, db: Session = Depends(get_db)
+) -> list[AuditEvent]:
+    if get_payment(db, payment_id) is None:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    return list(
+        db.scalars(
+            select(AuditEvent)
+            .where(AuditEvent.payment_id == payment_id)
+            .order_by(AuditEvent.id)
+        )
+    )
 
 
 @app.get("/api/v1/analytics/summary", response_model=AnalyticsSummary, tags=["analytics"])
