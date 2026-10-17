@@ -41,7 +41,7 @@ Source: [OpenPay_AI_PRD.md](OpenPay_AI_PRD.md). Re-baselined at **16:25**; statu
 | S5.a tests | ✅ 36 passing |
 | E3 dashboard | ✅ built + served at `/ui` (strict-tsc clean, bundle built); CP3 = user's browser walkthrough |
 | E4 AI copilot | ✅ `app/ai.py`, 5 routes, Gemini (8 s) or Ollama backend, rule-based fallback, 9 tests |
-| S5.b `demo.sh` | ❌ |
+| S5.b `demo.sh` | ✅ runs the §15 scenario end to end incl. Gemini answers |
 | S5.c README | ✅ rewritten with run, demo, API, config |
 
 Verified by running reset → seed 100 → PATCH A unhealthy → seed 50: all 50 new payments routed to B; a retried payment shows attempt 1 on A `PROVIDER_ERROR`, attempt 2 on B `SUCCEEDED`, routing decision stored on both. About 17 min ahead of the CP2 gate.
@@ -56,7 +56,7 @@ Notes for E3: attempt rows carry the failure code as the attempt `status` (e.g. 
 | ✅ done 16:44 | E2 Control, analytics, static mount | **CP2:** seed 100 → PATCH A unhealthy → seed 50; summary shifts to B. `/ui/` serves a hello page |
 | ✅ built ~17:00 | E3 Dashboard (HTML/CSS/TS) | **CP3:** full §15 demo runs in the browser without AI — user walkthrough pending |
 | ✅ done 17:38 | E4 AI copilot | **CP4:** Explain returns rule-based instantly, GLM answer replaces it; works with Ollama stopped |
-| 17:45–17:55 | E5 demo.sh, README, one rehearsal (tests already green) | `demo.sh` runs from reset, README matches the repo |
+| ✅ done 17:58 | E5 demo.sh, README, rehearsal | `demo.sh` ran clean from reset; README matches the repo |
 
 **Scope rules:**
 - CP1 slips past 17:05 → E4 ships rule-based only (skip S4.b).
@@ -102,8 +102,8 @@ Dark single page, left sidebar of controls, three views switched by nav buttons 
 ### E5 — Tests, demo script, README (5 min + rehearsal)
 
 - **S5.a Tests (3). ✅** Router: unhealthy excluded, unsupported currency excluded, higher score wins. Orchestrator: A fails → B succeeds gives 2 attempts; timeout → `PENDING` with 1 attempt; attempts ≤ `MAX_ATTEMPTS`. Existing 6 stay green.
-- **S5.b `demo.sh` (1).** reset → seed 100 → summary → PATCH A unhealthy → seed 50 → summary → list `?status=SUCCEEDED` and pick one with `attempt_count == 2` → attempts → ai/explain.
-- **S5.c README (1).** Fix status. Run: `uv run uvicorn app.main:app --reload` and `bun build dashboard/src/main.ts --outdir dashboard/dist --watch`. Open `http://127.0.0.1:8000/ui/`. `.env` is optional; every setting has a default in `config.py`. Mention `OPENPAY_OLLAMA_URL` and `OPENPAY_OLLAMA_MODEL` as overrides only for running the copilot against a different Ollama host or model tag. Note GLM 5.3 is open-weight, served through Ollama's cloud runtime; any local Ollama tag is a drop-in.
+- **S5.b `demo.sh` (1). ✅** reset → seed 100 → summary → PATCH A unhealthy → seed 50 → summary → list `?status=SUCCEEDED` and pick one with `attempt_count == 2` → attempts → ai/explain.
+- **S5.c README (1). ✅** Fix status. Run: `uv run uvicorn app.main:app --reload` and `bun build dashboard/src/main.ts --outdir dashboard/dist --watch`. Open `http://127.0.0.1:8000/ui/`. `.env` is optional; every setting has a default in `config.py`. Mention `OPENPAY_OLLAMA_URL` and `OPENPAY_OLLAMA_MODEL` as overrides only for running the copilot against a different Ollama host or model tag. Note GLM 5.3 is open-weight, served through Ollama's cloud runtime; any local Ollama tag is a drop-in.
 
 ## 90-second demo (PRD §15 mapped to clicks)
 

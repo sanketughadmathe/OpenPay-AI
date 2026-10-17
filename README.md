@@ -51,7 +51,13 @@ In the dashboard sidebar:
 3. **Seed 50**. New traffic routes to Provider B.
 4. Open **Transactions**, filter by Provider B, click a payment with 2 attempts. Attempt 1 failed on A, attempt 2 succeeded on B, and the routing decision for each attempt is shown.
 
-The same flow with `curl`:
+The whole flow, including both copilot answers, as one script (API must be running):
+
+```bash
+./demo.sh
+```
+
+The same steps as individual `curl` calls:
 
 ```bash
 B=http://127.0.0.1:8000/api/v1
