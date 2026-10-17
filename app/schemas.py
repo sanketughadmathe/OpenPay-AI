@@ -122,3 +122,25 @@ class AnalyticsSummary(BaseModel):
     per_provider: dict[str, ProviderSummary]
     failure_codes: dict[str, int]
     retry_count: int
+
+
+class Explanation(BaseModel):
+    """Structured copilot output. `source` is "rule-based" or the model that produced it."""
+
+    summary: str
+    evidence: list[str] = []
+    possible_causes: list[str] = []
+    recommended_actions: list[str] = []
+    confidence_note: str = ""
+    source: str = "rule-based"
+    simulated: bool = True
+
+
+class LLMExplanation(BaseModel):
+    """What the model must return. Validated before it is ever shown."""
+
+    summary: str = Field(min_length=1, max_length=2000)
+    evidence: list[str] = Field(default_factory=list, max_length=20)
+    possible_causes: list[str] = Field(default_factory=list, max_length=10)
+    recommended_actions: list[str] = Field(default_factory=list, max_length=10)
+    confidence_note: str = Field(default="", max_length=1000)

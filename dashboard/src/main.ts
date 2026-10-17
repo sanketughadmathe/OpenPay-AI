@@ -153,7 +153,7 @@ function startPolling(): void {
         state.copilotMode === "payment" && state.paymentId
           ? await api.cachedExplanation(state.paymentId)
           : await api.cachedIncident();
-      if (latest.source === "glm-5.3") {
+      if (latest.source !== "rule-based") {
         render.renderExplanation(latest, "final");
         stopPolling();
       }

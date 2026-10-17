@@ -38,11 +38,11 @@ Source: [OpenPay_AI_PRD.md](OpenPay_AI_PRD.md). Re-baselined at **16:25**; statu
 | S1.6 Idempotency (200 replay, 409 conflict) | ✅ |
 | E1 S1.a providers, S1.b router, S1.c orchestrator + retry | ✅ CP1 passed 16:44 |
 | E2 S2.a PATCH health, S2.b seed/reset, S2.c list + summary, S2.d static mount | ✅ CP2 passed 16:44 |
-| S5.a tests | ✅ 27 passing |
+| S5.a tests | ✅ 36 passing |
 | E3 dashboard | ✅ built + served at `/ui` (strict-tsc clean, bundle built); CP3 = user's browser walkthrough |
-| E4 AI copilot | ❌ no `app/ai.py`, explain endpoint 404; Ollama defaults sit in `config.py` |
+| E4 AI copilot | ✅ `app/ai.py`, 5 routes, Gemini (8 s) or Ollama backend, rule-based fallback, 9 tests |
 | S5.b `demo.sh` | ❌ |
-| S5.c README | ❌ still describes the first commit |
+| S5.c README | ✅ rewritten with run, demo, API, config |
 
 Verified by running reset → seed 100 → PATCH A unhealthy → seed 50: all 50 new payments routed to B; a retried payment shows attempt 1 on A `PROVIDER_ERROR`, attempt 2 on B `SUCCEEDED`, routing decision stored on both. About 17 min ahead of the CP2 gate.
 
@@ -55,7 +55,7 @@ Notes for E3: attempt rows carry the failure code as the attempt `status` (e.g. 
 | ✅ done 16:44 | E1 Orchestrator slice | **CP1:** `curl POST /payments` returns a routed, retried, persisted payment with `selected_provider` and `attempt_count` |
 | ✅ done 16:44 | E2 Control, analytics, static mount | **CP2:** seed 100 → PATCH A unhealthy → seed 50; summary shifts to B. `/ui/` serves a hello page |
 | ✅ built ~17:00 | E3 Dashboard (HTML/CSS/TS) | **CP3:** full §15 demo runs in the browser without AI — user walkthrough pending |
-| 17:30–17:45 | E4 AI copilot | **CP4:** Explain returns rule-based instantly, GLM answer replaces it; works with Ollama stopped |
+| ✅ done 17:38 | E4 AI copilot | **CP4:** Explain returns rule-based instantly, GLM answer replaces it; works with Ollama stopped |
 | 17:45–17:55 | E5 demo.sh, README, one rehearsal (tests already green) | `demo.sh` runs from reset, README matches the repo |
 
 **Scope rules:**
@@ -84,7 +84,7 @@ Notes for E3: attempt rows carry the failure code as the attempt `status` (e.g. 
   AC: Numbers equal SQL counts (AC-7).
 - **S2.d Static mount (2). ✅** `dashboard/index.html` with "hello", `app.mount("/ui", StaticFiles(directory="dashboard", html=True))` after all routes. `dashboard/dist/` in `.gitignore`.
 
-### E3 — Dashboard in HTML/CSS/TS (37 min) · ⏳ critical path
+### E3 — Dashboard in HTML/CSS/TS (37 min) · ✅ done
 
 Dark single page, left sidebar of controls, three views switched by nav buttons (no router). Red banner on every view: **SIMULATED — no real money**. Overview auto-refreshes every 3 s via `setInterval`; every control action triggers an immediate refresh.
 
@@ -93,7 +93,7 @@ Dark single page, left sidebar of controls, three views switched by nav buttons 
 - **S3.c Transactions view (6).** Table from the list endpoint: id, order, amount, method, status badge, provider, attempts, created. Two `<select>` filters (status, provider) re-fetch with query params. Row click → payment detail view.
 - **S3.d Payment detail + Copilot view (11).** Header with status badge and amount. Attempt timeline table (#, provider, outcome, failure code, latency, cost). Routing decision table per attempt (candidate, score, excluded reason). Audit events list. Two buttons: **Explain this payment**, **Summarize incident**. Result card renders Summary / Evidence / Hypotheses / Actions / Confidence with a `source` badge. Click → POST, render rule-based immediately, then poll GET every 2 s up to 30 s until `source === "glm-5.3"`, then stop.
 
-### E4 — AI copilot on GLM 5.3 (10 min)
+### E4 — AI copilot (10 min) · ✅ done on Gemini + Ollama backends
 
 - **S4.a Evidence + rule-based explainer (5).** `app/ai.py::build_payment_evidence(id)` → compact dict (payment, attempts, routing decisions, provider health at routing time, summary). `build_incident_evidence()` → summary before vs after the last `PROVIDER_HEALTH_CHANGED`. `rule_based_explanation(evidence)` → five-field structure from failure codes and routing log, `source: "rule-based"`. `POST /api/v1/ai/explain/{payment_id}` and `POST /api/v1/ai/incident` return it immediately, audit `AI_EXPLANATION_REQUESTED`, and enqueue the GLM call. `GET /api/v1/ai/explain/{payment_id}` returns the latest cached result.
 - **S4.b GLM call (5).** httpx POST to `OLLAMA_URL/api/chat` with the options above. System prompt: answer only from EVIDENCE, label hypotheses, state when data is insufficient, never invent amounts or outcomes, **respond with raw JSON and no markdown**. Strip fences → `json.loads` → Pydantic. On any exception, timeout, or connection error keep the rule-based result. Run as a FastAPI `BackgroundTask`, cache by payment id in a module dict. One warm-up call at startup, swallowed on failure.

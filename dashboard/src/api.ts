@@ -98,7 +98,7 @@ export interface Explanation {
   possible_causes: string[];
   recommended_actions: string[];
   confidence_note: string;
-  source: "glm-5.3" | "rule-based";
+  source: string; // "rule-based" or "<provider>:<model>", e.g. "gemini:gemini-3.8-flash"
 }
 
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {

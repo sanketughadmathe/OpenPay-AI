@@ -4,7 +4,16 @@ import type { AuditEvent, Explanation, Payment, Summary } from "./api";
 
 declare const Chart: any;
 
-const PALETTE = ["#5eead4", "#60a5fa", "#fbbf24", "#f87171", "#c084fc"];
+// One accent plus cool neutrals; semantic colors only where the meaning is semantic.
+const PALETTE = ["#5eead4", "#7dd3fc", "#8a95aa", "#65718a", "#4b5669"];
+const FAILURE_COLORS: Record<string, string> = {
+  TIMEOUT: "#fbbf24",
+  PROVIDER_ERROR: "#f87171",
+  PROVIDER_DOWN: "#f87171",
+  DECLINED: "#fb923c",
+  INSUFFICIENT_FUNDS: "#fb923c",
+  NO_ELIGIBLE_PROVIDER: "#8a95aa",
+};
 
 export function el(tag: string, className?: string, text?: string): HTMLElement {
   const node = document.createElement(tag);
@@ -83,6 +92,9 @@ function upsertChart(
   if (chartState[key]) {
     chartState[key].data.labels = labels;
     chartState[key].data.datasets[0].data = data;
+    chartState[key].data.datasets[0].backgroundColor = labels.map(
+      (label, i) => FAILURE_COLORS[label] ?? PALETTE[i % PALETTE.length]
+    );
     chartState[key].update();
     return;
   }
@@ -93,8 +105,8 @@ function upsertChart(
       datasets: [
         {
           data,
-          backgroundColor: data.map((_, i) => PALETTE[i % PALETTE.length]),
-          borderRadius: 6,
+          backgroundColor: labels.map((label, i) => FAILURE_COLORS[label] ?? PALETTE[i % PALETTE.length]),
+          borderRadius: 4,
           maxBarThickness: 64,
         },
       ],
@@ -104,8 +116,17 @@ function upsertChart(
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        y: { ticks: { color: "#8b96ab" }, grid: { color: "#253044" }, beginAtZero: true },
-        x: { ticks: { color: "#8b96ab" }, grid: { display: false } },
+        y: {
+          ticks: { color: "#65718a", font: { family: "Geist Mono, ui-monospace, monospace", size: 11 } },
+          grid: { color: "rgba(36, 48, 67, 0.7)" },
+          border: { display: false },
+          beginAtZero: true,
+        },
+        x: {
+          ticks: { color: "#8a95aa", font: { family: "Geist, system-ui, sans-serif", size: 12 } },
+          grid: { display: false },
+          border: { color: "#243043" },
+        },
       },
       tooltip: { callbacks: { label: (ctx: any) => formatter(ctx.parsed.y) } },
     },
@@ -294,7 +315,8 @@ export function renderExplanation(
 
   const head = el("div", "explain-head");
   head.append(el("h3", undefined, "AI explanation"));
-  const source = el("span", `source-badge ${explanation.source === "glm-5.3" ? "glm" : ""}`, explanation.source);
+  const isModel = explanation.source !== "rule-based";
+  const source = el("span", `source-badge ${isModel ? "glm" : ""}`, isModel ? explanation.source.replace(/^[a-z]+:/, "") : "rule-based");
   head.append(source);
   card.append(head);
 
@@ -316,6 +338,6 @@ export function renderExplanation(
   card.append(el("p", "muted", explanation.confidence_note));
 
   if (status === "polling") {
-    card.append(el("p", "muted", "Rule-based answer shown — GLM 5.3 answer will replace it…"));
+    card.append(el("p", "muted", "Rule-based answer shown now; the model answer will replace it when it arrives."));
   }
 }

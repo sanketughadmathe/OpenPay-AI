@@ -4,11 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>OpenPay AI — Dashboard</title>
+  <meta name="description" content="Simulated payment orchestration: provider routing, retries, audit trail and AI explanations. No real money.">
+  <meta name="theme-color" content="#0b0e14">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0e14'/%3E%3Cpath d='M8 22 L14 10 L18 18 L24 10' fill='none' stroke='%235eead4' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
-  <div class="sim-banner">SIMULATED — no real money</div>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="sim-banner" role="status">SIMULATED — no real money</div>
 
   <div class="app">
     <aside class="sidebar">
@@ -58,8 +65,8 @@
       <p class="sidebar-note">Controls PATCH provider health; the router reacts on the next payment.</p>
     </aside>
 
-    <main class="main">
-      <nav class="views">
+    <main class="main" id="main">
+      <nav class="views" aria-label="Dashboard views">
         <button class="nav-btn active" data-view="overview">Overview</button>
         <button class="nav-btn" data-view="transactions">Transactions</button>
         <button class="nav-btn" data-view="detail">Payment detail</button>
@@ -70,11 +77,11 @@
         <div class="charts">
           <div class="chart-card">
             <h2>Per-provider success rate</h2>
-            <canvas id="chart-providers" height="220"></canvas>
+            <div class="chart-box"><canvas id="chart-providers"></canvas></div>
           </div>
           <div class="chart-card">
             <h2>Failure codes</h2>
-            <canvas id="chart-failures" height="220"></canvas>
+            <div class="chart-box"><canvas id="chart-failures"></canvas></div>
           </div>
         </div>
         <p class="muted" id="overview-note"></p>
